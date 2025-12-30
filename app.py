@@ -3,15 +3,80 @@ from geopy.geocoders import Nominatim
 import time
 import os
 
-@app.route("/signup", methods=["POST"])
-def signup():
-    print(request.json)
-    return "ok"
-
-
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# ==============================
+# Geocoder（日本向け）
+# ==============================
+geolocator = Nominatim(user_agent="jp_render_single_file_app")
+
+# ==============================
+# 全体レート制限（簡易）
+# ==============================
+RATE_LIMIT = 10       # 回数
+RATE_WINDOW = 60      # 秒
+request_times = []
+
+def is_rate_limited_global():
+    now = time.time()
+    while request_times and now - request_times[0] > RATE_WINDOW:
+        request_times.pop(0)
+    if len(request_times) >= RATE_LIMIT:
+        return True
+    request_times.append(now)
+    return False
+
+# ==============================
+# 日本向け住所パース
+# ==============================
+def parse_japanese_address(address: dict):
+    prefecture = address.get("state") or address.get("province") or ""
+    city = (
+        address.get("city")
+        or address.get("county")
+        or address.get("town")
+        or address.get("village")
+        or ""
+    )
+    ward = address.get("suburb") or address.get("neighbourhood") or ""
+    return prefecture, city, ward
+
+# ==============================
+# HTML（成功）
+# ==============================
+HTML_OK = """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>登録完了</title>
+</head>
+<body>
+<h2>登録完了</h2>
+<p><strong>{{ nickname }}</strong> さん</p>
+<p>位置情報：{{ prefecture }} {{ city }} {{ ward }}</p>
+</body>
+</html>
+"""
+
+# ==============================
+# HTML（制限）
+# ==============================
+HTML_LIMIT = """
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>制限中</title>
+</head>
+<body>
+<h2>アクセス制限中</h2>
+<p>現在リクエストが集中しています。少し待ってから再試行してください。</p>
+</body>
+</html>
+"""
 
 # ==============================
 # トップページ
@@ -30,83 +95,21 @@ def static_files(filename):
     return "", 404
 
 # ==============================
-# Geocoder
-# ==============================
-geolocator = Nominatim(user_agent="jp_render_single_file_app")
-
-# ==============================
-# 全体レート制限（IP無関係）
-# ==============================
-RATE_LIMIT = 10
-RATE_WINDOW = 60
-request_times = []
-
-def is_rate_limited_global():
-    now = time.time()
-    while request_times and now - request_times[0] > RATE_WINDOW:
-        request_times.pop(0)
-    if len(request_times) >= RATE_LIMIT:
-        return True
-    request_times.append(now)
-    return False
-
-# ==============================
-# 日本向け住所パース
-# ==============================
-def parse_japanese_address(address):
-    prefecture = address.get("state") or address.get("province") or ""
-    city = (
-        address.get("city")
-        or address.get("county")
-        or address.get("town")
-        or address.get("village")
-        or ""
-    )
-    ward = address.get("suburb") or address.get("neighbourhood") or ""
-    return prefecture, city, ward
-
-# ==============================
-# 結果HTML
-# ==============================
-HTML_OK = """
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>登録完了</title>
-</head>
-<body>
-<h2>登録完了</h2>
-<p>{{ nickname }} さん</p>
-<p>位置: {{ prefecture }} {{ city }} {{ ward }}</p>
-</body>
-</html>
-"""
-
-HTML_LIMIT = """
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>制限中</title>
-</head>
-<body>
-<h2>アクセス制限中</h2>
-<p>現在リクエストが集中しています。少し待ってから再試行してください。</p>
-</body>
-</html>
-"""
-
-# ==============================
-# API
+# API /signup
 # ==============================
 @app.route("/signup", methods=["POST"])
 def signup():
 
+    # レート制限
     if is_rate_limited_global():
         return render_template_string(HTML_LIMIT), 429
 
+    # JSON受信
     data = request.get_json(force=True)
+
+    # ★ Render logs で確認できる
+    print("=== SIGNUP DATA ===")
+    print(data)
 
     nickname = data.get("nickname", "ゲスト")
     lat = data.get("latitude")
@@ -134,3 +137,9 @@ def signup():
         city=city,
         ward=ward
     )
+
+# ==============================
+# ローカル実行用（Renderでは無視される）
+# ==============================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
