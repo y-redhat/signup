@@ -2,6 +2,15 @@ from flask import Flask, request, render_template_string
 from geopy.geocoders import Nominatim
 import time
 
+from flask import Flask, send_from_directory
+
+app = Flask(__name__, static_folder="static")
+
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
+
 app = Flask(__name__)
 
 # ==============================
