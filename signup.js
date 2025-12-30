@@ -42,13 +42,12 @@ document.getElementById("toStep3").addEventListener("click", () => {
 document.getElementById("submit").addEventListener("click", async () => {
     userData.nickname = document.getElementById("nickname").value;
 
-    const res = await fetch("http://localhost:5000/signup", {
+    const res = await fetch("/signup", {   // ← ここ重要
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData)
     });
 
-    // サーバーが返したHTMLをそのまま表示
     const html = await res.text();
     document.open();
     document.write(html);
