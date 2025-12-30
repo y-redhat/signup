@@ -1,15 +1,27 @@
 from flask import Flask, request, render_template_string, send_from_directory
 from geopy.geocoders import Nominatim
 import time
+import os
 
-app = Flask(__name__, static_folder="static")
+app = Flask(__name__)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ==============================
-# トップページ（フロントエンド）
+# トップページ
 # ==============================
 @app.route("/")
 def index():
-    return send_from_directory("static", "index.html")
+    return send_from_directory(BASE_DIR, "signup.html")
+
+# ==============================
+# JS / CSS 配信
+# ==============================
+@app.route("/<path:filename>")
+def static_files(filename):
+    if filename.endswith((".js", ".css")):
+        return send_from_directory(BASE_DIR, filename)
+    return "", 404
 
 # ==============================
 # Geocoder
@@ -19,26 +31,23 @@ geolocator = Nominatim(user_agent="jp_render_single_file_app")
 # ==============================
 # 全体レート制限（IP無関係）
 # ==============================
-RATE_LIMIT = 10      # 1分あたり最大処理数
-RATE_WINDOW = 60     # 秒
+RATE_LIMIT = 10
+RATE_WINDOW = 60
 request_times = []
 
-def is_rate_limited_global() -> bool:
+def is_rate_limited_global():
     now = time.time()
-
     while request_times and now - request_times[0] > RATE_WINDOW:
         request_times.pop(0)
-
     if len(request_times) >= RATE_LIMIT:
         return True
-
     request_times.append(now)
     return False
 
 # ==============================
 # 日本向け住所パース
 # ==============================
-def parse_japanese_address(address: dict):
+def parse_japanese_address(address):
     prefecture = address.get("state") or address.get("province") or ""
     city = (
         address.get("city")
@@ -51,7 +60,7 @@ def parse_japanese_address(address: dict):
     return prefecture, city, ward
 
 # ==============================
-# HTML
+# 結果HTML
 # ==============================
 HTML_OK = """
 <!DOCTYPE html>
@@ -112,8 +121,6 @@ def signup():
         except Exception as e:
             print("住所取得エラー:", e)
 
-    print("[OK]", nickname, prefecture, city, ward)
-
     return render_template_string(
         HTML_OK,
         nickname=nickname,
@@ -121,9 +128,3 @@ def signup():
         city=city,
         ward=ward
     )
-
-# ==============================
-# ローカル実行用（Renderでは使われない）
-# ==============================
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
