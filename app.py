@@ -3,6 +3,12 @@ from geopy.geocoders import Nominatim
 import time
 import os
 
+@app.route("/signup", methods=["POST"])
+def signup():
+    print(request.json)
+    return "ok"
+
+
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
