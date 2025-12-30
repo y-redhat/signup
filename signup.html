@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>サインアップ</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="card">
+
+    <!-- STEP 1: 位置情報 -->
+    <div class="step active" id="step1">
+        <h2>位置情報の許可</h2>
+        <p>最初に位置情報の利用を許可してください。</p>
+        <button id="allowLocation">許可する</button>
+    </div>
+
+    <!-- STEP 2: メール・パスワード -->
+    <div class="step" id="step2">
+        <h2>アカウント情報</h2>
+        <input type="email" id="email" placeholder="メールアドレス" required>
+        <input type="password" id="password" placeholder="パスワード" required>
+        <button id="toStep3">次へ</button>
+    </div>
+
+    <!-- STEP 3: ユーザー名 -->
+    <div class="step" id="step3">
+        <h2>ユーザー名</h2>
+        <input type="text" id="nickname" placeholder="ユーザー名" required>
+        <button id="submit">登録</button>
+    </div>
+
+</div>
+
+<script src="signup.js"></script>
+</body>
+</html>
